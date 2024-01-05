@@ -31,13 +31,12 @@ query=f"select t_name from {table_name} where process_file='True'"
 cursor.execute(query)
 results = cursor.fetchall()
 table_names = [value[0] for value in results]
-#print("table names..",table_names)
+print("table names..",table_names)
 for i in table_names:
     st=''
     q=f"select table_schema from {table_name} where t_name='{i}'"
     cursor.execute(q)
     result = cursor.fetchall()
-    print(result)
     for j in result:
         for k in range(0,len(j[0])):
             column_name=j[0][k]["column_name"]
@@ -71,15 +70,10 @@ for i in table_names:
     create_query=create_query[:-2]
     create_table_query=create_query+")"
     # print(create_table_query,"\n")
-    cursor.execute("SELECT EXISTS(SELECT 1 FROM pg_tables WHERE tablename = %s);", (i,)) 
+    cursor.execute("SELECT EXISTS(SELECT 1 FROM pg_tables WHERE tablename = %s);", (i.lower(),)) 
     table_exists = cursor.fetchone()[0]
     if table_exists:
         cursor.execute(f"drop table {i}")
-        # print(f"table {i} dropped")
-    # else:
-    #     print(f"The '{i}' table is created")
     cursor.execute(create_table_query)
-    #print(f"The '{i}' table is created")
+    print(f"The '{i}' table is created")
 con.commit()
-
-
