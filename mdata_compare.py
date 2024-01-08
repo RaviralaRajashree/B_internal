@@ -2,7 +2,7 @@ import os
 import json
 import pandas as pd
 import psycopg2 as pg
-from datetime import date
+from datetime import date, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from deepdiff import DeepDiff
@@ -63,30 +63,34 @@ def insert_data(file_names_list,folder_path):
             elif dtype=="float64":
                 metadata_json[k]["data_type"]="float"
         mdata = json.dumps(metadata_json, indent=4)
-        print(metadata_json)
+        # print(metadata_json)
         #Remove extension from file name
         fi=Path(file).stem
         current_date = date.today()
         # Insert values into the configure_Table
         insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s)"
-        # update_query = f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {} WHERE f_name = {fi}"
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         fi_exists = cursor.fetchone()[0]
+        dif = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"select file_schema from {table_name} where f_name like %s "
-            cursor.execute(query,(fi+'%',))
-            existing_file_schema = cursor.fetchall()
-            diff = DeepDiff(existing_file_schema[0][0], metadata_json, ignore_order=True)
+            query=f"SELECT file_schema,update_type FROM {table_name} WHERE f_name like %s"
+            cursor.execute(query, (fi+'%',))
+            filesch = cursor.fetchall()[0]
+            existing_file_schema, update_type = filesch
+            diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
             dif=json.dumps(diff)
+            
+            expiry_date = current_date -  timedelta(days=1)
             if diff=={}:
-                print("No changes in metadata")
-                cursor.execute(insert_query, (fi, fi,current_date,mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual","No changes"))
+                dif = "No changes"
+            if update_type == 'Automatic':
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N'  WHERE f_name = '{fi}'")
             else:
-                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",dif))
-        else:
-            cursor.execute(insert_query, (fi, fi,current_date,mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual","changes"))
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}'")
 
+        # update_query = f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {} WHERE f_name = {fi}"
+        cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",dif))
    
     print("Data inserted")
 
