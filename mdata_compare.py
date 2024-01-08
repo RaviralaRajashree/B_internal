@@ -71,10 +71,10 @@ def insert_data(file_names_list,folder_path):
         insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s)"
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         fi_exists = cursor.fetchone()[0]
-        dif = ''
+        diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT file_schema,update_type FROM {table_name} WHERE f_name like %s"
+            query=f"SELECT file_schema,update_type FROM {table_name} WHERE f_name like %s  order by id desc limit 1"
             cursor.execute(query, (fi+'%',))
             filesch = cursor.fetchall()[0]
             existing_file_schema, update_type = filesch
@@ -90,7 +90,7 @@ def insert_data(file_names_list,folder_path):
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}'")
 
         # update_query = f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {} WHERE f_name = {fi}"
-        cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",dif))
+        cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff)))
    
     print("Data inserted")
 
