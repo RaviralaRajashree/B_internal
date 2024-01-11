@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from deepdiff import DeepDiff
-import config_table_creation_local 
+# import config_table_creation_local
 
 # Load environment variables from .env file
 load_dotenv()
@@ -28,7 +28,9 @@ def pg_connect(database,user,password,host,port):
     )
     return connection
 con=pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
+cursor = con.cursor()
 
+table_name ='config_table'
 
 #returns files list in local folder
 def get_csv_file_names(folder_path):
@@ -71,26 +73,33 @@ def insert_data(file_names_list,folder_path):
         # Insert values into the configure_Table
         insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes,alter_table_flag) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
         insert_query1 = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,alter_table_flag) VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
+        # cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         fi_exists = cursor.fetchone()[0]
         diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT file_schema,update_type,start_date FROM {table_name} WHERE f_name like %s  order by id desc limit 1"
-            cursor.execute(query, (fi+'%',))
+            query=f"SELECT file_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
+            cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
-            existing_file_schema, update_type, start_date= filesch
+            existing_file_schema, update_type, start_date, process_flag, id = filesch
+            print("*****************PROCESSFLAG:",process_flag,"****************ID:",id)
             diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
             dif=json.dumps(diff)
             expiry_date = current_date -  timedelta(days=1)
 
             if expiry_date<start_date:
                 expiry_date=current_date
-
+            
+            # updates old column expirydate, processflag,activeflag based on updatetype
             if update_type == 'Automatic':
-                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id IN (select id from {table_name} where f_name='{fi}' order by id desc limit 1)")
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id = {id};")
             else:
-                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}' AND id IN (select id from {table_name} where f_name='{fi}' order by id desc limit 1)")
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}' AND id = {id};")
+            # updates old column altertableflag to null if processflag is false
+            if process_flag == False:
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET alter_table_flag = Null WHERE f_name = '{fi}' AND id = {id};")
+            # inserts new column
             if diff=={}:
                 cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
             else:
@@ -103,7 +112,5 @@ def insert_data(file_names_list,folder_path):
 
 folder_path = os.getcwd()
 file_names_list = get_csv_file_names(folder_path)
-table_name ='config_table'
-cursor = con.cursor()
 insert_data(file_names_list,folder_path)
 con.commit()
