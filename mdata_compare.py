@@ -6,6 +6,7 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from deepdiff import DeepDiff
+import config_table_creation_local 
 
 # Load environment variables from .env file
 load_dotenv()
@@ -68,8 +69,8 @@ def insert_data(file_names_list,folder_path):
         fi=Path(file).stem
         current_date = date.today()
         # Insert values into the configure_Table
-        insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s)"
-        insert_query1 = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type) VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s)"
+        insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes,alter_table_flag) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
+        insert_query1 = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,alter_table_flag) VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         fi_exists = cursor.fetchone()[0]
         diff = ''
@@ -91,12 +92,12 @@ def insert_data(file_names_list,folder_path):
             else:
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}' AND id IN (select id from {table_name} where f_name='{fi}' order by id desc limit 1)")
             if diff=={}:
-                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual"))
+                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
             else:
-                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff)))
+                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff),True))
             
         else:
-            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual"))
+            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
          
     print("Data inserted")
 
