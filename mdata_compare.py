@@ -69,6 +69,7 @@ def insert_data(file_names_list,folder_path):
         current_date = date.today()
         # Insert values into the configure_Table
         insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s)"
+        insert_query1 = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type) VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s)"
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         fi_exists = cursor.fetchone()[0]
         diff = ''
@@ -83,14 +84,18 @@ def insert_data(file_names_list,folder_path):
             
             expiry_date = current_date -  timedelta(days=1)
             if diff=={}:
-                dif = "No changes"
+                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual"))
+            else:
+                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff)))
+                
             if update_type == 'Automatic':
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N'  WHERE f_name = '{fi}'")
             else:
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}'")
-
+        else:
+            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual"))
         # update_query = f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {} WHERE f_name = {fi}"
-        cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff)))
+        
    
     print("Data inserted")
 
