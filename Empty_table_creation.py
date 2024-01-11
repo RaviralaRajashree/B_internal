@@ -27,7 +27,7 @@ print("Postgresql connection established successfully")
 table_name='config_table'
 cursor= con.cursor()
 
-query=f"select t_name from {table_name} where process_file='True'"
+query=f"select t_name from {table_name} where active_flag='True'"
 cursor.execute(query)
 results = cursor.fetchall()
 table_names = [value[0] for value in results]
@@ -41,12 +41,14 @@ for i in table_names:
         for k in range(0,len(j[0])):
             column_name=j[0][k]["column_name"]
             dtype=j[0][k]["data_type"]
-            if dtype=="object":
-                dtype="VARCHAR(255)"
-            elif dtype=="int64":
-                dtype="bigint"
-            elif dtype=="float64":
-                dtype="float"
+
+            # if dtype=="object":
+            #     dtype="VARCHAR(255)"
+            # elif dtype=="int64":
+            #     dtype="bigint"
+            # elif dtype=="float64":
+            #     dtype="float"
+            
             primary_key=j[0][k]["primary_key"]
             if primary_key==True:
                 primary_key="PRIMARY KEY"

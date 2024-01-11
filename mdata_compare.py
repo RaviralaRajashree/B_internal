@@ -75,28 +75,29 @@ def insert_data(file_names_list,folder_path):
         diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT file_schema,update_type FROM {table_name} WHERE f_name like %s  order by id desc limit 1"
+            query=f"SELECT file_schema,update_type,start_date FROM {table_name} WHERE f_name like %s  order by id desc limit 1"
             cursor.execute(query, (fi+'%',))
             filesch = cursor.fetchall()[0]
-            existing_file_schema, update_type = filesch
+            existing_file_schema, update_type, start_date= filesch
             diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
             dif=json.dumps(diff)
-            
             expiry_date = current_date -  timedelta(days=1)
+
+            if expiry_date<start_date:
+                expiry_date=current_date
+
+            if update_type == 'Automatic':
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id IN (select id from {table_name} where f_name='{fi}' order by id desc limit 1)")
+            else:
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}' AND id IN (select id from {table_name} where f_name='{fi}' order by id desc limit 1)")
             if diff=={}:
                 cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual"))
             else:
                 cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff)))
-                
-            if update_type == 'Automatic':
-                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N'  WHERE f_name = '{fi}'")
-            else:
-                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}'")
+            
         else:
             cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual"))
-        # update_query = f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {} WHERE f_name = {fi}"
-        
-   
+         
     print("Data inserted")
 
 folder_path = os.getcwd()
