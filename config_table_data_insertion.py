@@ -73,7 +73,6 @@ def insert_data(file_names_list,folder_path):
         # Insert values into the configure_Table
         insert_query = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,track_changes,alter_table_flag) VALUES (%s, %s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
         insert_query1 = f"INSERT INTO cardworks_internal.public.{table_name}(F_name, T_name, start_date,File_schema, Table_schema, File_table_mapping, Process_flag, active_flag, update_type,alter_table_flag) VALUES (%s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
-        # cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         cursor.execute(f"SELECT EXISTS(SELECT 1 FROM {table_name} where f_name = %s);", (fi,))
         fi_exists = cursor.fetchone()[0]
         diff = ''
@@ -85,7 +84,6 @@ def insert_data(file_names_list,folder_path):
             existing_file_schema, update_type, start_date, process_flag, id = filesch
             print("*****************PROCESSFLAG:",process_flag,"****************ID:",id)
             diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
-            dif=json.dumps(diff)
             expiry_date = current_date -  timedelta(days=1)
 
             if expiry_date<start_date:
