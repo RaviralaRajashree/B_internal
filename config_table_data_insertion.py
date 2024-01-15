@@ -82,7 +82,7 @@ def insert_data(file_names_list,folder_path):
             cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
             existing_file_schema, update_type, start_date, process_flag, id = filesch
-            print("*****************PROCESSFLAG:",process_flag,"****************ID:",id)
+            # print("*****************PROCESSFLAG:",process_flag,"****************ID:",id)
             diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
             expiry_date = current_date -  timedelta(days=1)
 
@@ -91,7 +91,7 @@ def insert_data(file_names_list,folder_path):
             
             # updates old column expirydate, processflag,activeflag based on updatetype
             if update_type == 'Automatic':
-                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id = {id};")
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id = {id};")
             else:
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}' AND id = {id};")
             # updates old column altertableflag to null if processflag is false
@@ -99,16 +99,17 @@ def insert_data(file_names_list,folder_path):
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET alter_table_flag = Null WHERE f_name = '{fi}' AND id = {id};")
             # inserts new column
             if diff=={}:
-                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
+                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
             else:
-                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff),True))
+                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",json.dumps(diff),True))
             
         else:
-            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
+            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
          
     print("Data inserted")
 
-folder_path = os.getcwd()
+# folder_path = os.getcwd()
+folder_path = '../'
 file_names_list = get_csv_file_names(folder_path)
 insert_data(file_names_list,folder_path)
 con.commit()

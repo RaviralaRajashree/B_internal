@@ -24,17 +24,17 @@ def pg_connect(database,user,password,host,port):
     )
     return connection
 
-con=pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
+con = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
 print("Postgresql connection established successfully")
-cursor= con.cursor()
+cursor = con.cursor()
 
-table_name='config_table'
+table_name = 'config_table'
 
-select_table_query=f"select f_name from {table_name} where process_file='True'"
+select_table_query = f"select f_name from {table_name} where process_flag = 'True';"
 cursor.execute(select_table_query)
 results = cursor.fetchall()
 file_names = [value[0] for value in results]
-print("file names..",file_names)
+print("file names to be processed:",file_names)
 
 def get_csv_file_names(folder_path):
     file_names = os.listdir(folder_path)
@@ -43,13 +43,14 @@ def get_csv_file_names(folder_path):
         if file_name.endswith(".csv"):
             file_names_list.append(file_name)
     return file_names_list
-folder_path = os.getcwd()
+# folder_path = os.getcwd()
+folder_path = "../"
 
 
 file_names_list=get_csv_file_names(folder_path)
-print("File names list ",file_names_list)   
+print("Files in local folder ",file_names_list)   
 
-select_table_query=f"select t_name from {table_name} where process_file='True'"
+select_table_query=f"select t_name from {table_name} where process_flag='True'"
 cursor.execute(select_table_query)
 results = cursor.fetchall()
 table_names = [value[0] for value in results]
@@ -66,10 +67,10 @@ for file in file_names_list:
             for r in res:
                 table=str(r)[2:-3]
 
-            query = f"select file_table_mapping from {table_name} where t_name='{table}'"
-            # print(query)
+            query = f"select file_table_mapping from {table_name} where t_name='{table}' ORDER BY id DESC LIMIT 1;"
             cursor.execute(query)
             result = cursor.fetchall()
+            # print("*************",result)
             for j in result:
                 for k in range(0,len(j[0])):
                     column.append(j[0][k]["t_column"])
@@ -85,7 +86,7 @@ for file in file_names_list:
             # print(f"{table}",df)
 
             data = [tuple(row) for row in df.values]
-            # print(data)
+            # print("DATA:",data)
             
             updated_table_name = f'{table}'
 
