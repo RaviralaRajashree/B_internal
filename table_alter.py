@@ -40,6 +40,7 @@ for row in config_table:
             print(row['id'],":",row['track_changes'].keys())
             if 'iterable_item_added' in row['track_changes'].keys():
                 # print(row['id'],":","columns added:",list(row['track_changes']['iterable_item_added'].values()))
+                print("11111111111111111111", row['id'])
                 cols_added = list(row['track_changes']['iterable_item_added'].values())
                 for col in cols_added:
                     table_cols_query = f"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name}';"
@@ -67,8 +68,8 @@ for row in config_table:
                         is_null=""
                     add_col_query = f'ALTER TABLE {table_name} ADD {col_name} {data_type} {primary_key} {is_unique} {is_null}'
                     cursor.execute(add_col_query)
-                    con.commit()
             if ('values_changed' in row['track_changes'].keys()) and ('iterable_item_added' not in row['track_changes'].keys()) and ('iterable_item_removed' not in row['track_changes'].keys()):
+                print("22222222222222222222222", row['id'])
                 cols_altered = list(row['track_changes']['values_changed'].keys())
                 for col in cols_altered:
                     col_index = col.split(']')[0].split('[')[-1]
@@ -78,8 +79,8 @@ for row in config_table:
                     # print("*****************",col_index,col_name,new_dtype)
                     add_col_query = f'ALTER TABLE {table_name} ADD {col_name}_1 {new_dtype}'
                     cursor.execute(add_col_query)
-                    con.commit()
             if 'iterable_item_removed' in row['track_changes'].keys():
+                print("3333333333333333333333333333", row['id'])
                 # print(row['id'],":","columns removed:",row['track_changes']['iterable_item_removed'])
                 pass
 

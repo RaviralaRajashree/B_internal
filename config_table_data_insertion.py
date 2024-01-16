@@ -6,7 +6,6 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from deepdiff import DeepDiff
-# import config_table_creation_local
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,7 +26,7 @@ def pg_connect(database,user,password,host,port):
         port = port
     )
     return connection
-con=pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
+con = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
 cursor = con.cursor()
 
 table_name ='config_table'
@@ -35,7 +34,7 @@ table_name ='config_table'
 #returns files list in local folder
 def get_csv_file_names(folder_path):
     file_names = os.listdir(folder_path)
-    file_names_list=[]
+    file_names_list = []
     for file_name in file_names:
         if file_name.endswith(".csv"):
             file_names_list.append(file_name)
@@ -45,9 +44,9 @@ def get_csv_file_names(folder_path):
 def insert_data(file_names_list,folder_path):
     for file in file_names_list:
         file_path=folder_path+"\\"+file
-        # print("file",file_path)
         df = pd.read_csv(file_path)
         metadata = df.dtypes.apply(lambda x: x.name).to_dict()
+        print("111111111111",metadata)
         metadata_json = []
         ft_map = []
         for k, v in metadata.items():
@@ -66,7 +65,7 @@ def insert_data(file_names_list,folder_path):
             elif dtype=="float64":
                 metadata_json[k]["data_type"]="float"
         mdata = json.dumps(metadata_json, indent=4)
-        # print(metadata_json)
+        print("2222222222222222222",metadata_json)
         #Remove extension from file name
         fi=Path(file).stem
         current_date = date.today()
@@ -82,7 +81,6 @@ def insert_data(file_names_list,folder_path):
             cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
             existing_file_schema, update_type, start_date, process_flag, id = filesch
-            # print("*****************PROCESSFLAG:",process_flag,"****************ID:",id)
             diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
             expiry_date = current_date -  timedelta(days=1)
 
@@ -108,8 +106,8 @@ def insert_data(file_names_list,folder_path):
          
     print("Data inserted")
 
-# folder_path = os.getcwd()
-folder_path = '../'
+folder_path = os.getcwd()
+# folder_path = '../'
 file_names_list = get_csv_file_names(folder_path)
 insert_data(file_names_list,folder_path)
 con.commit()

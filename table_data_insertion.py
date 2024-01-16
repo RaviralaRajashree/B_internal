@@ -43,8 +43,8 @@ def get_csv_file_names(folder_path):
         if file_name.endswith(".csv"):
             file_names_list.append(file_name)
     return file_names_list
-# folder_path = os.getcwd()
-folder_path = "../"
+folder_path = os.getcwd()
+# folder_path = "../"
 
 
 file_names_list=get_csv_file_names(folder_path)

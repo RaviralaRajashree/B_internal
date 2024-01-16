@@ -1,8 +1,5 @@
 import os
-import json
-import pandas as pd
 import psycopg2 as pg
-from datetime import date
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
