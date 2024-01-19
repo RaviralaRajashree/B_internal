@@ -6,7 +6,8 @@ from datetime import date, timedelta
 from dotenv import load_dotenv
 from pathlib import Path
 from deepdiff import DeepDiff
-# import config_table_creation_local
+
+from json_compare import compare
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,15 +28,17 @@ def pg_connect(database,user,password,host,port):
         port = port
     )
     return connection
-con=pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
-cursor = con.cursor()
+connection = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
+cursor = connection.cursor()
 
 table_name ='config_table'
+# folder_path = os.getcwd()
+folder_path = '../'
 
 #returns files list in local folder
 def get_csv_file_names(folder_path):
     file_names = os.listdir(folder_path)
-    file_names_list=[]
+    file_names_list = []
     for file_name in file_names:
         if file_name.endswith(".csv"):
             file_names_list.append(file_name)
@@ -45,7 +48,6 @@ def get_csv_file_names(folder_path):
 def insert_data(file_names_list,folder_path):
     for file in file_names_list:
         file_path=folder_path+"\\"+file
-        # print("file",file_path)
         df = pd.read_csv(file_path)
         metadata = df.dtypes.apply(lambda x: x.name).to_dict()
         metadata_json = []
@@ -78,37 +80,35 @@ def insert_data(file_names_list,folder_path):
         diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT file_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
+            query=f"SELECT Table_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
             cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
             existing_file_schema, update_type, start_date, process_flag, id = filesch
-            print("*****************PROCESSFLAG:",process_flag,"****************ID:",id)
-            diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
+            diff = compare(existing_file_schema, metadata_json)
             expiry_date = current_date -  timedelta(days=1)
 
-            if expiry_date<start_date:
+            if expiry_date < start_date:
                 expiry_date=current_date
             
             # updates old column expirydate, processflag,activeflag based on updatetype
             if update_type == 'Automatic':
-                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = {expiry_date}, Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id = {id};")
+                cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', Process_flag = 'N', active_flag = 'N' WHERE f_name = '{fi}' AND id = {id};")
             else:
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET expiry_date = '{expiry_date}', active_flag = 'N'  WHERE f_name = '{fi}' AND id = {id};")
             # updates old column altertableflag to null if processflag is false
             if process_flag == False:
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET alter_table_flag = Null WHERE f_name = '{fi}' AND id = {id};")
             # inserts new column
-            if diff=={}:
-                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
+            if diff==[]:
+                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
             else:
-                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",json.dumps(diff),True))
+                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",json.dumps(diff),True))
             
         else:
-            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Manual",False))
+            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
          
     print("Data inserted")
 
-folder_path = os.getcwd()
 file_names_list = get_csv_file_names(folder_path)
 insert_data(file_names_list,folder_path)
-con.commit()
+connection.commit()
