@@ -1,3 +1,4 @@
+import json
 import psycopg2 as pg
 import os
 from dotenv import load_dotenv
@@ -36,52 +37,52 @@ for row in config_table:
     table_name = row['T_name']
     if row['alter_table_flag']:
         if row['track_changes'] :
-            # print(row)
-            print(row['id'],":",row['track_changes'].keys())
-            if 'iterable_item_added' in row['track_changes'].keys():
-                # print(row['id'],":","columns added:",list(row['track_changes']['iterable_item_added'].values()))
-                print("11111111111111111111", row['id'])
-                cols_added = list(row['track_changes']['iterable_item_added'].values())
-                for col in cols_added:
-                    table_cols_query = f"SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = '{table_name}';"
-                    cursor.execute(table_cols_query)
-                    table_cols = cursor.fetchall()
-                    table_cols = [item[0] for item in table_cols]
-                    # print("TABLE COLUMNS:",table_cols,"-----",col['column_name'])
-                    # print("****************",col['column_name'].lower() in table_cols)
-                    if col['column_name'].lower() in table_cols:
-                        col_name = f"{col['column_name']}_1"
-                    else:
+            print(row['id'],":",row['track_changes'])
+            for change in row['track_changes']:
+                if 'column_added' in  change.keys():
+                    for col in change['column_added']:
                         col_name = col['column_name']
-                    data_type = col['data_type']
-                    if col['primary_key'] == True:
-                        primary_key = "PRIMARY KEY"
-                    else:
-                        primary_key = ""
-                    if col['is_unique'] == True:
-                        is_unique = "UNIQUE"
-                    else:
-                        is_unique = ""
-                    if col['is_null'] == True:
-                        is_null="NULL"
-                    else:
-                        is_null=""
-                    add_col_query = f'ALTER TABLE {table_name} ADD {col_name} {data_type} {primary_key} {is_unique} {is_null}'
-                    cursor.execute(add_col_query)
-            if ('values_changed' in row['track_changes'].keys()) and ('iterable_item_added' not in row['track_changes'].keys()) and ('iterable_item_removed' not in row['track_changes'].keys()):
-                print("22222222222222222222222", row['id'])
-                cols_altered = list(row['track_changes']['values_changed'].keys())
-                for col in cols_altered:
-                    col_index = col.split(']')[0].split('[')[-1]
-                    # print(row['File_schema'])
-                    col_name = row['File_schema'][int(col_index)]['column_name']
-                    new_dtype = row['track_changes']['values_changed'][col]['new_value']
-                    # print("*****************",col_index,col_name,new_dtype)
-                    add_col_query = f'ALTER TABLE {table_name} ADD {col_name}_1 {new_dtype}'
-                    cursor.execute(add_col_query)
-            if 'iterable_item_removed' in row['track_changes'].keys():
-                print("3333333333333333333333333333", row['id'])
-                # print(row['id'],":","columns removed:",row['track_changes']['iterable_item_removed'])
-                pass
+                        data_type = col['data_type']
+                        if col['primary_key'] == True:
+                            primary_key = "PRIMARY KEY"
+                        else:
+                            primary_key = ""
+                        if col['is_unique'] == True:
+                            is_unique = "UNIQUE"
+                        else:
+                            is_unique = ""
+                        if col['is_null'] == True:
+                            is_null="NULL"
+                        else:
+                            is_null=""
+                        add_col_query = f'ALTER TABLE {table_name} ADD {col_name} {data_type} {primary_key} {is_unique} {is_null}'
+                        cursor.execute(add_col_query)
+                
+                if 'column_changed' in  change.keys():
+                    for col in change['column_changed']:
+                        col_name = col['column_name'] + '_1'
+                        if col['value_changed'] == 'data_type':
+                            new_val = col['new_value']
+                        add_col_query = f'ALTER TABLE {table_name} ADD {col_name} {new_val}'
+                        cursor.execute(add_col_query)
+                        # UPDATE table schema and file table mapping
+                        for col1 in row['Table_schema']:
+                            if col1['column_name'] == col['column_name']:
+                                col1['column_name'] = col_name
+                        for col2 in row['File_table_mapping']:
+                            if col2['t_column'] == col['column_name']:
+                                col2['t_column'] = col_name
+                        
+                        update_table_mapping_query = f"""UPDATE {config_table_name} SET Table_schema = '{json.dumps(row["Table_schema"])}', File_table_mapping = '{json.dumps(row["File_table_mapping"])}' WHERE f_name = '{table_name}' and id = {row['id']}"""
+                        cursor.execute(update_table_mapping_query)
+
+
+                if 'column_deleted' in  change.keys():
+                    for col in change['column_deleted']:
+                        print("*",col)
+                    
+                
+                
+
 
 con.commit()

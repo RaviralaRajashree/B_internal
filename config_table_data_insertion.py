@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from pathlib import Path
 from deepdiff import DeepDiff
 
+from json_compare import compare
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -26,10 +28,12 @@ def pg_connect(database,user,password,host,port):
         port = port
     )
     return connection
-con = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
-cursor = con.cursor()
+connection = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
+cursor = connection.cursor()
 
 table_name ='config_table'
+# folder_path = os.getcwd()
+folder_path = '../'
 
 #returns files list in local folder
 def get_csv_file_names(folder_path):
@@ -46,7 +50,6 @@ def insert_data(file_names_list,folder_path):
         file_path=folder_path+"\\"+file
         df = pd.read_csv(file_path)
         metadata = df.dtypes.apply(lambda x: x.name).to_dict()
-        print("111111111111",metadata)
         metadata_json = []
         ft_map = []
         for k, v in metadata.items():
@@ -65,7 +68,7 @@ def insert_data(file_names_list,folder_path):
             elif dtype=="float64":
                 metadata_json[k]["data_type"]="float"
         mdata = json.dumps(metadata_json, indent=4)
-        print("2222222222222222222",metadata_json)
+        # print(metadata_json)
         #Remove extension from file name
         fi=Path(file).stem
         current_date = date.today()
@@ -77,14 +80,14 @@ def insert_data(file_names_list,folder_path):
         diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT file_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
+            query=f"SELECT Table_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
             cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
             existing_file_schema, update_type, start_date, process_flag, id = filesch
-            diff = DeepDiff(existing_file_schema, metadata_json, ignore_order=True)
+            diff = compare(existing_file_schema, metadata_json)
             expiry_date = current_date -  timedelta(days=1)
 
-            if expiry_date<start_date:
+            if expiry_date < start_date:
                 expiry_date=current_date
             
             # updates old column expirydate, processflag,activeflag based on updatetype
@@ -96,7 +99,7 @@ def insert_data(file_names_list,folder_path):
             if process_flag == False:
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET alter_table_flag = Null WHERE f_name = '{fi}' AND id = {id};")
             # inserts new column
-            if diff=={}:
+            if diff==[]:
                 cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
             else:
                 cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",json.dumps(diff),True))
@@ -106,8 +109,6 @@ def insert_data(file_names_list,folder_path):
          
     print("Data inserted")
 
-folder_path = os.getcwd()
-# folder_path = '../'
 file_names_list = get_csv_file_names(folder_path)
 insert_data(file_names_list,folder_path)
-con.commit()
+connection.commit()

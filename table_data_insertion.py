@@ -24,11 +24,13 @@ def pg_connect(database,user,password,host,port):
     )
     return connection
 
-con = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
+connection = pg_connect(postgresql_database,postgresql_user,postgresql_password,postgresql_host,postgresql_port)
 print("Postgresql connection established successfully")
-cursor = con.cursor()
+cursor = connection.cursor()
 
 table_name = 'config_table'
+# folder_path = os.getcwd()
+folder_path = "../"
 
 select_table_query = f"select f_name from {table_name} where process_flag = 'True';"
 cursor.execute(select_table_query)
@@ -43,8 +45,6 @@ def get_csv_file_names(folder_path):
         if file_name.endswith(".csv"):
             file_names_list.append(file_name)
     return file_names_list
-folder_path = os.getcwd()
-# folder_path = "../"
 
 
 file_names_list=get_csv_file_names(folder_path)
@@ -101,4 +101,4 @@ for file in file_names_list:
             time_difference = new_current_time_dt - current_time_dt
             print("Time Difference:..", time_difference)
 
-con.commit()
+connection.commit()
