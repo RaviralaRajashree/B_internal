@@ -31,7 +31,7 @@ cursor= con.cursor()
 select_query = f"SELECT * FROM {config_table_name};"
 cursor.execute(select_query)
 config_table = cursor.fetchall()
-columns = ['id','F_name', 'T_name', 'start_date', 'expiry_date','File_schema','Table_schema','File_table_mapping','Process_flag','active_flag', 'update_type', 'track_changes','alter_table_flag']
+columns = ['id','F_name', 'T_name', 'start_date', 'expiry_date','File_schema','Table_schema','File_table_mapping','Process_flag','active_flag', 'update_type', 'track_changes','alter_table_flag','update_flag', 'update_details']
 config_table = [dict(zip(columns, values)) for values in config_table]
 for row in config_table:
     table_name = row['T_name']

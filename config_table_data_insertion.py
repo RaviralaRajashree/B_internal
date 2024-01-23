@@ -82,15 +82,23 @@ def insert_data(file_names_list,folder_path):
         diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT Table_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
+            query=f"SELECT File_schema, update_type, start_date, Process_flag, id, update_flag, update_details FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
             cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
-            existing_file_schema, update_type, start_date, process_flag, id = filesch
+            existing_file_schema, update_type, start_date, process_flag, id, update_flag, update_details = filesch
             diff = compare(existing_file_schema, metadata_json)
             expiry_date = current_date -  timedelta(days=1)
+            if update_flag:
+                for column in existing_file_schema:
+                    for update in update_details:
+                        if column['column_name'] == update['column_name']:
+                            if update['value'] == 'data_type':
+                                column['data_type'] = update['data_type']
+                            print(update)
+                    # TAKE FILE SCHEMA AND MODIFY WITH UPDATE DETAILS AND ASSIGN TO TABLE SCHEMA
 
             if expiry_date < start_date:
-                expiry_date=current_date
+                expiry_date = current_date
             
             # updates old column expirydate, processflag,activeflag based on updatetype
             if update_type == 'Automatic':
