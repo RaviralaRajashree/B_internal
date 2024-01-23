@@ -90,11 +90,18 @@ def insert_data(file_names_list,folder_path):
             expiry_date = current_date -  timedelta(days=1)
             if update_flag:
                 for column in existing_file_schema:
-                    for update in update_details:
-                        if column['column_name'] == update['column_name']:
-                            if update['value'] == 'data_type':
-                                column['data_type'] = update['data_type']
+                    if 'column_added' in update_details.keys():
+                        for update in update_details['column_added']:
                             print(update)
+                    if 'column_deleted' in update_details.keys():
+                        for update in update_details['column_deleted']:
+                            print(update)
+                    if 'column_changed' in update_details.keys():
+                        for update in update_details['column_changed']:
+                            if column['column_name'] == update['column_name']:
+                                if update['value_changed'] == 'data_type':
+                                    column['data_type'] = update['new_value']
+                                print(update)
                     # TAKE FILE SCHEMA AND MODIFY WITH UPDATE DETAILS AND ASSIGN TO TABLE SCHEMA
 
             if expiry_date < start_date:
