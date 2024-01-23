@@ -40,7 +40,7 @@ def create_stats_table(stats_table):
     table_exists = cursor.fetchone()[0]
 
     if table_exists:
-        print("config table already present")
+        print("Stats table already present")
 
     else:
         stats_table_query = """create table stats_table (id serial NOT NULL PRIMARY KEY, table_name varchar(255), column_name varchar(255), column_dtype varchar(255), table_row_count bigint,
@@ -54,7 +54,7 @@ create_stats_table(stats_table)
 
 
 
-##### finds the list of csv  files present in the 
+##### finds the list of csv  files present in the source
 def get_csv_file_names(folder_path):
     file_names = os.listdir(folder_path)
     file_names_list=[]

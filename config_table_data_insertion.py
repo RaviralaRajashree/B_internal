@@ -32,16 +32,18 @@ connection = pg_connect(postgresql_database,postgresql_user,postgresql_password,
 cursor = connection.cursor()
 
 table_name ='config_table'
-# folder_path = os.getcwd()
-folder_path = '../'
+folder_path = os.getcwd()
+#folder_path = '../'
 
 #returns files list in local folder
 def get_csv_file_names(folder_path):
     file_names = os.listdir(folder_path)
+    print(file_names)
     file_names_list = []
     for file_name in file_names:
         if file_name.endswith(".csv"):
             file_names_list.append(file_name)
+    #print(file_names_list)
     return file_names_list
 
 #inserts row in config_table when new file is detected
