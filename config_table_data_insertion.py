@@ -89,7 +89,7 @@ def insert_data(file_names_list,folder_path):
             diff = compare(existing_file_schema, metadata_json)
             expiry_date = current_date -  timedelta(days=1)
             if update_flag:
-                for column in existing_file_schema:
+                for column in metadata_json:
                     if 'column_added' in update_details.keys():
                         for update in update_details['column_added']:
                             print(update)
@@ -117,12 +117,12 @@ def insert_data(file_names_list,folder_path):
                 cursor.execute(f"UPDATE cardworks_internal.public.{table_name} SET alter_table_flag = Null WHERE f_name = '{fi}' AND id = {id};")
             # inserts new column
             if diff==[]:
-                cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
+                cursor.execute(insert_query1, (fi, fi,current_date, mdata, json.dumps(metadata_json), json.dumps(ft_map,indent=4), True, True,"Automatic",False))
             else:
-                cursor.execute(insert_query, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",json.dumps(diff),True))
+                cursor.execute(insert_query, (fi, fi,current_date, mdata, json.dumps(metadata_json), json.dumps(ft_map,indent=4), True, True,"Automatic",json.dumps(diff),True))
             
         else:
-            cursor.execute(insert_query1, (fi, fi,current_date, mdata, mdata, json.dumps(ft_map,indent=4), True, True,"Automatic",False))
+            cursor.execute(insert_query1, (fi, fi,current_date, mdata, json.dumps(metadata_json), json.dumps(ft_map,indent=4), True, True,"Automatic",False))
          
     print("Data inserted")
 
