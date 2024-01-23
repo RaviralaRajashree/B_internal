@@ -28,7 +28,7 @@ def create_table(table_name,cursor_obj):
         print(f"The '{table_name}' already exists.")
     else:
         # Create table if table doesn't exist
-        create_table_query = f"CREATE TABLE {table_name}(id serial NOT NULL PRIMARY KEY,F_name varchar(255), T_name varchar, start_date date, expiry_date date,File_schema json,Table_schema json,File_table_mapping json,Process_flag boolean,active_flag boolean, update_type VARCHAR(255), track_changes json,alter_table_flag boolean)"
+        create_table_query = f"CREATE TABLE {table_name}(id serial NOT NULL PRIMARY KEY,F_name varchar(255), T_name varchar, start_date date, expiry_date date,File_schema json,Table_schema json,File_table_mapping json,Process_flag boolean,active_flag boolean, update_type VARCHAR(255), track_changes json,alter_table_flag boolean,update_flag boolean, update_details json)"
         cursor_obj.execute(create_table_query)
         print(f"The {table_name} is created")
 
