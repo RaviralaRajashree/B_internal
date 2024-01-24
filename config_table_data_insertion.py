@@ -33,7 +33,7 @@ cursor = connection.cursor()
 
 table_name ='config_table'
 folder_path = os.getcwd()
-#folder_path = '../'
+# folder_path = '../'
 
 #returns files list in local folder
 def get_csv_file_names(folder_path):
@@ -82,27 +82,40 @@ def insert_data(file_names_list,folder_path):
         diff = ''
         if fi_exists:
             print(f"the file with the name {fi} already exists.....comparing metadata of both files")
-            query=f"SELECT File_schema, update_type, start_date, Process_flag, id, update_flag, update_details FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
+            query=f"SELECT File_schema, update_type, start_date, Process_flag, id FROM {table_name} WHERE f_name = %s  ORDER BY id DESC LIMIT 1;"
             cursor.execute(query, (fi,))
             filesch = cursor.fetchall()[0]
-            existing_file_schema, update_type, start_date, process_flag, id, update_flag, update_details = filesch
+            existing_file_schema, update_type, start_date, process_flag, id = filesch
             diff = compare(existing_file_schema, metadata_json)
             expiry_date = current_date -  timedelta(days=1)
-            if update_flag:
-                for column in metadata_json:
-                    if 'column_added' in update_details.keys():
-                        for update in update_details['column_added']:
-                            print(update)
-                    if 'column_deleted' in update_details.keys():
-                        for update in update_details['column_deleted']:
-                            print(update)
-                    if 'column_changed' in update_details.keys():
-                        for update in update_details['column_changed']:
-                            if column['column_name'] == update['column_name']:
-                                if update['value_changed'] == 'data_type':
-                                    column['data_type'] = update['new_value']
-                                print(update)
-                    # TAKE FILE SCHEMA AND MODIFY WITH UPDATE DETAILS AND ASSIGN TO TABLE SCHEMA
+            update_details_query = f"SELECT update_details FROM {table_name} WHERE f_name = %s ORDER BY id;"
+            cursor.execute(update_details_query, (fi,))
+            update_details =  cursor.fetchall()[0]
+            print("*************",update_details)
+            if update_details:
+                print("*****************")
+                for update_detail in update_details:
+                    for column in metadata_json:
+                        if update_detail and 'column_added' in update_detail.keys():
+                            for update in update_detail['column_added']:
+                                col = {'column_name': update['column_name'], 
+                                    'data_type': update['data_type'], 
+                                    'primary_key': update['primary_key'], 
+                                    'is_unique': update['is_unique'], 
+                                    'is_null': update['is_null']
+                                        }
+                                metadata_json.append(col)
+                        if update_detail and 'column_deleted' in update_detail.keys():
+                            for update in update_detail['column_deleted']:
+                                if column['column_name'] == update['column_name']:
+                                    metadata_json.remove(column) 
+                        if update_detail and 'column_changed' in update_detail.keys():
+                            for update in update_detail['column_changed']:
+                                if column['column_name'] == update['column_name']:
+                                    if update['value_changed'] == 'data_type':
+                                        column['data_type'] = update['new_value']
+                                    print(update)
+                        # TAKE FILE SCHEMA AND MODIFY WITH UPDATE DETAILS AND ASSIGN TO TABLE SCHEMA
 
             if expiry_date < start_date:
                 expiry_date = current_date

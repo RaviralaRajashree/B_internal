@@ -38,6 +38,20 @@ print("Postgresql connection established successfully")
 table_name='config_table'
 cursor = con.cursor()
 create_table(table_name,cursor)
+# trigger_query = f"CREATE TRIGGER update_flag_trigger 
+#                   BEFORE UPDATE ON config_table
+#                   FOR EACH ROW
+#                   EXECUTE FUNCTION update_flag_trigger_function();"
+
+# function_query = f"CREATE OR REPLACE FUNCTION update_flag_trigger_function()
+#                     RETURNS TRIGGER AS $$
+#                     BEGIN
+#                             NEW.update_flag = 'Y';
+#                         RETURN NEW;
+#                     END;
+#                     $$ LANGUAGE plpgsql;"
+# cursor.execute(trigger_query)
+# cursor.execute(function_query)
 con.commit()
 
 

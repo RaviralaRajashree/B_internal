@@ -10,6 +10,7 @@ import psycopg2 as pg
 import os
 from dotenv import load_dotenv
 from json_compare import compare 
+from pprint import pprint
 
 # Load environment variables from .env file
 load_dotenv()
@@ -42,23 +43,26 @@ columns = ['id','F_name', 'T_name', 'start_date', 'expiry_date','File_schema','T
 update_rows = [dict(zip(columns, values)) for values in update_rows]
 for row in update_rows:
     differences = compare(row['File_schema'],row['Table_schema'])
-    select_update_details = f"SELECT id, F_name, File_schema, Table_schema, update_flag, update_details FROM {table_name} WHERE F_name = {row['F_name']} ORDER BY id DESC LIMIT 2;"
+    select_update_details = f"SELECT update_details FROM {table_name} WHERE F_name = '{row['F_name']}' ORDER BY id DESC LIMIT 2;"
     cursor.execute(select_update_details)
     cursor.fetchone()
-    prev_row = cursor.fetchone()
-    print(prev_row['update_details'])
-    if 'column_added' in differences.keys():
-        for diff in differences['column_added']:
-            if diff in prev_row:
-                differences['column_added'].remove(diff)
-    if 'column_deleted' in differences.keys():
-        for diff in differences['column_deleted']:
-            if diff in prev_row:
-                differences['column_deleted'].remove(diff)
-    if 'column_changed' in differences.keys():
-        for diff in differences['column_changed']:
-            if diff in prev_row:
-                differences['column_changed'].remove(diff)
-    update_query = f"UPDATE {table_name} SET update_details = {json.dumps(differences)} WHERE id = {row['id']}"
+    prev_row = cursor.fetchone()[0]
+    pprint(prev_row)
+    if prev_row and differences:
+        if 'column_added' in differences[0].keys() and 'column_added' in prev_row.keys():
+            for diff in differences[0]['column_added']:
+                # if diff and prev_row[5]['column_added'] and diff in prev_row[5]['column_added']:
+                if diff in prev_row['column_added']:
+                    differences[0]['column_added'].remove(diff)
+        if 'column_deleted' in differences[0].keys() and 'column_deleted' in prev_row.keys():
+            for diff in differences[0]['column_deleted']:
+                if diff in prev_row['column_deleted']:
+                    differences[0]['column_deleted'].remove(diff)
+        if 'column_changed' in differences[0].keys() and 'column_changed' in prev_row.keys():
+            for diff in differences[0]['column_changed']:
+                print("***",diff)
+                if diff in prev_row['column_changed']:
+                    differences[0]['column_changed'].remove(diff)
+    update_query = f"UPDATE {table_name} SET update_details = '{json.dumps(differences)}' WHERE id = {row['id']}"
     cursor.execute(update_query)
 connection.commit()

@@ -29,8 +29,8 @@ print("Postgresql connection established successfully")
 cursor = connection.cursor()
 
 table_name = 'config_table'
-# folder_path = os.getcwd()
-folder_path = "../"
+folder_path = os.getcwd()
+# folder_path = "../"
 
 select_table_query = f"select f_name from {table_name} where process_flag = 'True';"
 cursor.execute(select_table_query)
